@@ -1,0 +1,24 @@
+root = "."
+tmp_dir = "build"
+env_files = [".env"]
+
+[build]
+  cmd = "go build -o ./build/api.exe ./cmd/api"
+  entrypoint = ["./build/api.exe"]
+  include_dir = ["cmd", "internal"]
+  include_ext = ["go"]
+  exclude_dir = ["build", "vendor"]
+  delay = 1000
+  stop_on_error = true
+  send_interrupt = true
+  kill_delay = "500ms"
+
+[build.windows]
+  cmd = "go build -o ./build/api.exe ./cmd/api"
+  entrypoint = ["build\\api.exe"]
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true
