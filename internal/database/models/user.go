@@ -13,7 +13,7 @@ type User struct {
 	ClerkUserID     string     `gorm:"type:varchar(255);not null;uniqueIndex:ux_users_clerk_user_id"`
 	Username        string     `gorm:"type:varchar(30);not null;uniqueIndex:ux_users_username;check:chk_users_username_format,username ~ '^[a-z][a-z0-9_]{2,29}$'"`
 	ProfileImageKey *string    `gorm:"type:text"`
-	ShowLastSeen    bool       `gorm:"not null;default:true"`
+	ShowLastSeen    *bool      `gorm:"not null;default:true"`
 	LastSeenAt      *time.Time `gorm:"type:timestamptz"`
 	CreatedAt       time.Time  `gorm:"type:timestamptz;not null;default:CURRENT_TIMESTAMP"`
 	UpdatedAt       time.Time  `gorm:"type:timestamptz;not null;default:CURRENT_TIMESTAMP"`
