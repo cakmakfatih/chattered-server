@@ -4,11 +4,16 @@ on:
   push:
     branches:
       - dev
-      - "feature/**"
   pull_request:
     branches:
       - dev
-  workflow_dispatch:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  pull_request_review:
+    types:
+      - submitted
 
 permissions:
   contents: read
@@ -16,6 +21,7 @@ permissions:
 jobs:
   test:
     name: Run Go tests
+    if: github.event_name != 'pull_request_review' || (github.event.pull_request.base.ref == 'dev' && github.event.review.state == 'approved')
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
