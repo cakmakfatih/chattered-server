@@ -1,0 +1,95 @@
+package server
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
+
+func (deps Dependencies) me(c *gin.Context) {
+	user, err := deps.Users.GetByClerkID(c.Request.Context(), c.GetString("clerk_user_id"))
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, apiError{code: "internal_error", message: "Could not load the user profile"})
+		return
+	}
+	if user == nil {
+		c.JSON(http.StatusOK, registrationStatusResponse{})
+		return
+	}
+	c.JSON(http.StatusOK, registrationStatusResponse{
+		RegistrationComplete: true,
+		User:                 profileResponse(user),
+	})
+}
+
+func (deps Dependencies) checkUsername(c *gin.Context) {
+	fields, ok := readRequestObject(c, "username")
+	if !ok {
+		return
+	}
+	username, ok := decodeString(fields["username"])
+	if !ok {
+		respondError(c, http.StatusUnprocessableEntity, *invalidUsername())
+		return
+	}
+	if validationErr := deps.usernameValidationError(username); validationErr != nil {
+		respondError(c, http.StatusUnprocessableEntity, *validationErr)
+		return
+	}
+	available, availabilityErr := deps.usernameAvailability(c.Request.Context(), username)
+	if availabilityErr != nil {
+		respondError(c, http.StatusInternalServerError, *availabilityErr)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"available": available})
+}
+
+func (deps Dependencies) validateBio(c *gin.Context) {
+	fields, ok := readRequestObject(c, "bio")
+	if !ok {
+		return
+	}
+	bio, ok := decodeOptionalString(fields["bio"])
+	if !ok {
+		respondError(c, http.StatusUnprocessableEntity, *invalidBiography())
+		return
+	}
+	if validationErr := deps.biographyValidationError(bio); validationErr != nil {
+		respondError(c, http.StatusUnprocessableEntity, *validationErr)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"valid": true, "normalized_bio": bio})
+}
+
+func (deps Dependencies) validatePhoto(c *gin.Context) {
+	fields, ok := readRequestObject(c, "photo")
+	if !ok {
+		return
+	}
+	if photoErr := deps.validatePhotoMetadata(fields["photo"]); photoErr != nil {
+		respondError(c, http.StatusUnprocessableEntity, *photoErr)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"valid": true})
+}
+
+func (deps Dependencies) complete(c *gin.Context) {
+	fields, ok := readRequestObject(c, "username", "gender", "bio", "photo")
+	if !ok {
+		return
+	}
+	input, validationErr := deps.parseCompletionInput(fields)
+	if validationErr != nil {
+		respondError(c, http.StatusUnprocessableEntity, *validationErr)
+		return
+	}
+	user, status, createErr := deps.createProfile(c.Request.Context(), c.GetString("clerk_user_id"), input)
+	if createErr != nil {
+		respondError(c, status, *createErr)
+		return
+	}
+	c.JSON(http.StatusCreated, registrationStatusResponse{
+		RegistrationComplete: true,
+		User:                 profileResponse(user),
+	})
+}

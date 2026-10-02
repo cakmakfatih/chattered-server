@@ -5,8 +5,8 @@ import (
 
 	"github.com/clerk/clerk-sdk-go/v2"
 
-	"apartmanim/server/internal/config"
-	"apartmanim/server/internal/server"
+	"github.com/cakmakfatih/chattered-server/internal/config"
+	"github.com/cakmakfatih/chattered-server/internal/server"
 )
 
 func main() {
