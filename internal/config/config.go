@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	ClerkSecretKey string
+	DatabaseURL    string
 	Port           string
 }
 
@@ -24,10 +25,15 @@ func Load() (Config, error) {
 		return Config{}, errors.New("CLERK_SECRET_KEY is required")
 	}
 
+	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
+	if databaseURL == "" {
+		return Config{}, errors.New("DATABASE_URL is required")
+	}
+
 	port := strings.TrimSpace(os.Getenv("PORT"))
 	if port == "" {
 		port = "8080"
 	}
 
-	return Config{ClerkSecretKey: secretKey, Port: port}, nil
+	return Config{ClerkSecretKey: secretKey, DatabaseURL: databaseURL, Port: port}, nil
 }

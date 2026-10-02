@@ -1,13 +1,22 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/clerk/clerk-sdk-go/v2"
+	clerkjwt "github.com/clerk/clerk-sdk-go/v2/jwt"
 
 	"github.com/cakmakfatih/chattered-server/internal/config"
+	"github.com/cakmakfatih/chattered-server/internal/database"
 	"github.com/cakmakfatih/chattered-server/internal/server"
 )
+
+type clerkSessionVerifier struct{}
+
+func (clerkSessionVerifier) VerifySession(ctx context.Context, token string) (*clerk.SessionClaims, error) {
+	return clerkjwt.Verify(ctx, &clerkjwt.VerifyParams{Token: token})
+}
 
 func main() {
 	cfg, err := config.Load()
@@ -17,7 +26,16 @@ func main() {
 
 	clerk.SetKey(cfg.ClerkSecretKey)
 
-	router := server.New()
+	db, err := database.OpenPostgres(cfg.DatabaseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	router := server.NewWithDependencies(server.Dependencies{
+		Verifier:  clerkSessionVerifier{},
+		Users:     database.NewUserRepository(db),
+		Validator: server.NewOnboardingValidator(),
+	})
 	log.Printf("API server listening on :%s", cfg.Port)
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatal(err)
