@@ -12,6 +12,7 @@ type User struct {
 	ID              uuid.UUID  `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	ClerkUserID     string     `gorm:"type:varchar(255);not null;uniqueIndex:ux_users_clerk_user_id"`
 	Username        string     `gorm:"type:varchar(30);not null;uniqueIndex:ux_users_username;check:chk_users_username_format,username ~ '^[a-z][a-z0-9_]{2,29}$'"`
+	Gender          string     `gorm:"type:varchar(6);not null;check:chk_users_gender,gender IN ('male','female','other')"`
 	Bio             *string    `gorm:"type:varchar(750)"`
 	ProfileImageKey *string    `gorm:"type:text"`
 	ShowLastSeen    *bool      `gorm:"not null;default:true"`

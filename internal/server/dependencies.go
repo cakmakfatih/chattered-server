@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"net/http"
 	"regexp"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -25,9 +27,33 @@ type Dependencies struct {
 	Validator *validator.Validate
 }
 
-// NewWithDependencies is the injection point for the planned onboarding routes.
-func NewWithDependencies(_ Dependencies) *gin.Engine {
-	return New()
+// NewWithDependencies assembles the onboarding API with injectable services.
+func NewWithDependencies(deps Dependencies) *gin.Engine {
+	router := gin.New()
+	router.Use(gin.Logger(), gin.Recovery(), corsMiddleware())
+	api := router.Group("/api/v1")
+	api.Use(func(c *gin.Context) {
+		parts := strings.Fields(c.GetHeader("Authorization"))
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+			respondError(c, http.StatusUnauthorized, "unauthorized", "", "A valid Clerk session is required", nil)
+			c.Abort()
+			return
+		}
+		claims, err := deps.Verifier.VerifySession(c.Request.Context(), parts[1])
+		if err != nil || claims == nil || claims.Subject == "" || claims.SessionID == "" {
+			respondError(c, http.StatusUnauthorized, "unauthorized", "", "A valid Clerk session is required", nil)
+			c.Abort()
+			return
+		}
+		c.Set("clerk_user_id", claims.Subject)
+		c.Next()
+	})
+	api.GET("/me", deps.me)
+	api.POST("/onboarding/username/check", deps.checkUsername)
+	api.POST("/onboarding/bio/validate", deps.validateBio)
+	api.POST("/onboarding/photo/validate", deps.validatePhoto)
+	api.POST("/onboarding/complete", deps.complete)
+	return router
 }
 
 // NewOnboardingValidator registers rules shared by the onboarding steps.
