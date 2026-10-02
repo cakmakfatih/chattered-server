@@ -17,7 +17,6 @@ var photoMIME = map[string]string{
 	".jpg":  "image/jpeg",
 	".jpeg": "image/jpeg",
 	".png":  "image/png",
-	".webp": "image/webp",
 	".heic": "image/heic",
 }
 
@@ -41,7 +40,7 @@ func (deps Dependencies) validatePhotoMetadata(raw json.RawMessage) *apiError {
 	if err != nil {
 		return err
 	}
-	if deps.Validator.Var(photo.MIMEType, "required,oneof=image/jpeg image/png image/webp image/heic") != nil || expectedMIME != photo.MIMEType {
+	if deps.Validator.Var(photo.MIMEType, "required,oneof=image/jpeg image/png image/heic") != nil || expectedMIME != photo.MIMEType {
 		return invalidPhoto("photo.mime_type", "Photo MIME type must match its extension")
 	}
 	if deps.Validator.Var(photo.SizeBytes, photoSizeValidationTag) != nil {

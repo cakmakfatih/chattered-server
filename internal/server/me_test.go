@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	"apartmanim/server/internal/database/models"
+	"github.com/cakmakfatih/chattered-server/internal/database/models"
 )
 
 func TestMeReportsIncompleteRegistration(t *testing.T) {

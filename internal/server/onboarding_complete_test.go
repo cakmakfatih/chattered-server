@@ -9,7 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"apartmanim/server/internal/database/models"
+	"github.com/cakmakfatih/chattered-server/internal/database/models"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -213,7 +214,7 @@ func TestCompleteRegistrationRechecksUsernameAfterPrevalidation(t *testing.T) {
 func TestCompleteRegistrationMapsUsernameUniqueConstraintRace(t *testing.T) {
 	// Arrange: another request wins the username race during insertion.
 	users := &fakeUserRepository{createFn: func(context.Context, *models.User) error {
-		return &pgconn.PgError{Code: "23505", ConstraintName: "ux_users_username"}
+		return &pgconn.PgError{Code: pgerrcode.UniqueViolation, ConstraintName: "ux_users_username"}
 	}}
 	router := testRouter(validSessionVerifier(), users)
 
@@ -230,7 +231,7 @@ func TestCompleteRegistrationMapsUsernameUniqueConstraintRace(t *testing.T) {
 func TestCompleteRegistrationMapsClerkIDUniqueConstraintRace(t *testing.T) {
 	// Arrange: another request creates the same Clerk user during insertion.
 	users := &fakeUserRepository{createFn: func(context.Context, *models.User) error {
-		return &pgconn.PgError{Code: "23505", ConstraintName: "ux_users_clerk_user_id"}
+		return &pgconn.PgError{Code: pgerrcode.UniqueViolation, ConstraintName: "ux_users_clerk_user_id"}
 	}}
 	router := testRouter(validSessionVerifier(), users)
 

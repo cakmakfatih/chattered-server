@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"apartmanim/server/internal/database/models"
+	"github.com/cakmakfatih/chattered-server/internal/database/models"
 	"github.com/clerk/clerk-sdk-go/v2"
 )
 

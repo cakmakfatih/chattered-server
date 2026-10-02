@@ -36,9 +36,11 @@ func TestPhotoValidationAcceptsSupportedMetadata(t *testing.T) {
 		{name: "JPEG jpg", fileName: "avatar.jpg", mimeType: "image/jpeg"},
 		{name: "JPEG jpeg", fileName: "avatar.jpeg", mimeType: "image/jpeg"},
 		{name: "PNG", fileName: "avatar.png", mimeType: "image/png"},
-		{name: "WebP", fileName: "avatar.webp", mimeType: "image/webp"},
 		{name: "HEIC", fileName: "avatar.heic", mimeType: "image/heic"},
-		{name: "uppercase extension", fileName: "avatar.JPG", mimeType: "image/jpeg"},
+		{name: "uppercase JPG extension", fileName: "avatar.JPG", mimeType: "image/jpeg"},
+		{name: "uppercase JPEG extension", fileName: "avatar.JPEG", mimeType: "image/jpeg"},
+		{name: "uppercase PNG extension", fileName: "avatar.PNG", mimeType: "image/png"},
+		{name: "uppercase HEIC extension", fileName: "avatar.HEIC", mimeType: "image/heic"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -132,6 +134,7 @@ func TestPhotoValidationRejectsBadFileMetadata(t *testing.T) {
 		field    string
 	}{
 		{name: "unsupported extension", fileName: "avatar.gif", mimeType: "image/gif", field: "photo.file_name"},
+		{name: "unsupported WebP extension", fileName: "avatar.webp", mimeType: "image/webp", field: "photo.file_name"},
 		{name: "missing extension", fileName: "avatar", mimeType: "image/jpeg", field: "photo.file_name"},
 		{name: "path instead of file name", fileName: "../avatar.jpg", mimeType: "image/jpeg", field: "photo.file_name"},
 		{name: "mismatched MIME", fileName: "avatar.png", mimeType: "image/jpeg", field: "photo.mime_type"},

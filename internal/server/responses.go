@@ -1,6 +1,6 @@
 package server
 
-import "apartmanim/server/internal/database/models"
+import "github.com/cakmakfatih/chattered-server/internal/database/models"
 
 type registrationStatusResponse struct {
 	RegistrationComplete bool                 `json:"registration_complete"`

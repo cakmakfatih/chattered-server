@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	"apartmanim/server/internal/database/models"
+	"github.com/cakmakfatih/chattered-server/internal/database/models"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )

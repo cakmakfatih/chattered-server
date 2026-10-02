@@ -1,21 +1,14 @@
 # Chattered API
 
-This document describes the HTTP API currently implemented by the Go server. It is intended for mobile developers, backend developers, and coding agents. Update it whenever an endpoint, request, response, or validation rule changes.
+This document defines the HTTP API contract between the Chattered mobile app and Go backend. It is intended for mobile developers, backend developers, and coding agents. Update it whenever an endpoint, request, response, or validation rule changes.
 
 ## Contents
 
-- [API status](#api-status)
 - [Conventions](#conventions)
 - [Authentication](#authentication)
 - [Endpoints](#endpoints)
 - [Common errors](#common-errors)
 - [Onboarding flow](#onboarding-flow)
-
-## API status
-
-The endpoints below are registered by `server.NewWithDependencies()`. The executable in `server/cmd/api` currently calls `server.New()`, which installs middleware but does not register these API routes. The endpoints are therefore implemented and covered by tests, but are not reachable through the executable until startup provides the required dependencies and uses the dependency-injected router.
-
-The former `GET /api/hello` example endpoint has been removed. There is no server-side Clerk sign-in endpoint; the client signs in with Clerk and sends its session token to the API.
 
 ## Conventions
 
@@ -26,21 +19,20 @@ The former `GET /api/hello` example endpoint has been removed. There is no serve
 - Top-level request fields not listed for an endpoint are rejected.
 - Request bodies are limited to 16 KiB.
 - Error responses use the same JSON envelope described in [Common errors](#common-errors).
-- No message or chat endpoints are currently implemented.
 
 ### CORS
 
-The server currently allows any origin (`*`), allows the `Authorization` and `Content-Type` headers, and lists `GET`, `POST`, and `OPTIONS` as allowed methods. CORS preflight `OPTIONS` requests return `204 No Content` before authentication runs.
+The API allows any origin (`*`), allows the `Authorization` and `Content-Type` headers, and lists `GET`, `POST`, and `OPTIONS` as allowed methods. CORS preflight `OPTIONS` requests return `204 No Content` before authentication runs.
 
 ## Authentication
 
-Send the Clerk session token as a bearer token:
+The mobile app handles Clerk sign-up and sign-in. It sends the resulting Clerk session token to this API as a bearer token:
 
 ```http
 Authorization: Bearer <clerk-session-token>
 ```
 
-The server verifies the token through its injected session verifier. A valid session must contain both a Clerk user ID (`sub`) and a session ID. The user ID from the verified token is used for profile lookup and creation; clients must not provide their own Clerk user ID.
+The API verifies the token. A valid session must contain both a Clerk user ID (`sub`) and a session ID. The user ID from the verified token is used for profile lookup and creation; clients must not provide their own Clerk user ID.
 
 Missing, malformed, or invalid credentials return `401 Unauthorized`. The response does not include token-verification details.
 
@@ -215,7 +207,6 @@ Supported extensions and MIME types:
 | --- | --- |
 | `.jpg`, `.jpeg` | `image/jpeg` |
 | `.png` | `image/png` |
-| `.webp` | `image/webp` |
 | `.heic` | `image/heic` |
 
 Extensions are case-insensitive. The MIME type must match exactly. Directory separators (`/` or `\\`) in `file_name` are rejected. The maximum size is 10 MiB (`10,485,760` bytes).

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"apartmanim/server/internal/database/models"
+	"github.com/cakmakfatih/chattered-server/internal/database/models"
 )
 
 type completionInput struct {
