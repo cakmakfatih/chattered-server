@@ -98,8 +98,8 @@ func TestCompleteRegistrationNormalizesEmptyBio(t *testing.T) {
 }
 
 func TestCompleteRegistrationAcceptsBioAtUnicodeLimit(t *testing.T) {
-	// Arrange: provide exactly 750 Unicode characters in the final payload.
-	bio := strings.Repeat("ğ", 750)
+	// Arrange: provide exactly 300 Unicode characters in the final payload.
+	bio := strings.Repeat("ğ", 300)
 	users := &fakeUserRepository{}
 	router := testRouter(validSessionVerifier(), users)
 	payload := validCompletionPayload()
@@ -113,7 +113,7 @@ func TestCompleteRegistrationAcceptsBioAtUnicodeLimit(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body = %s", response.Code, http.StatusCreated, response.Body.String())
 	}
 	if len(users.saved) != 1 || users.saved[0].Bio == nil || *users.saved[0].Bio != bio {
-		t.Fatalf("saved bio = %#v, want the 750-character biography", users.saved)
+		t.Fatalf("saved bio = %#v, want the 300-character biography", users.saved)
 	}
 }
 
@@ -145,11 +145,11 @@ func TestCompleteRegistrationRevalidatesEveryInput(t *testing.T) {
 	}{
 		{name: "missing username", change: func(p map[string]any) { delete(p, "username") }, code: "invalid_username", field: "username"},
 		{name: "short username", change: func(p map[string]any) { p["username"] = "ab" }, code: "invalid_username", field: "username"},
-		{name: "long username", change: func(p map[string]any) { p["username"] = strings.Repeat("a", 31) }, code: "invalid_username", field: "username"},
+		{name: "long username", change: func(p map[string]any) { p["username"] = strings.Repeat("a", 16) }, code: "invalid_username", field: "username"},
 		{name: "missing gender", change: func(p map[string]any) { delete(p, "gender") }, code: "invalid_gender", field: "gender"},
 		{name: "unknown gender", change: func(p map[string]any) { p["gender"] = "unknown" }, code: "invalid_gender", field: "gender"},
 		{name: "uppercase gender", change: func(p map[string]any) { p["gender"] = "Female" }, code: "invalid_gender", field: "gender"},
-		{name: "long bio", change: func(p map[string]any) { p["bio"] = strings.Repeat("a", 751) }, code: "invalid_bio", field: "bio"},
+		{name: "long bio", change: func(p map[string]any) { p["bio"] = strings.Repeat("a", 301) }, code: "invalid_bio", field: "bio"},
 		{name: "control character in bio", change: func(p map[string]any) { p["bio"] = "hello\x00world" }, code: "invalid_bio", field: "bio"},
 		{name: "oversized photo", change: func(p map[string]any) {
 			photo := validPhotoMetadata()

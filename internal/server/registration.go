@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/cakmakfatih/chattered-server/internal/database/models"
@@ -76,7 +77,8 @@ func (deps Dependencies) createProfile(ctx context.Context, clerkID string, inpu
 }
 
 func invalidUsername() *apiError {
-	return &apiError{code: "invalid_username", field: "username", message: "Invalid username"}
+	message := fmt.Sprintf("Username must be 3-%d characters, start with a lowercase letter, and use only lowercase letters, numbers, or underscores", maxUsernameCharacters)
+	return &apiError{code: "invalid_username", field: "username", message: message}
 }
 
 func invalidGender() *apiError {
@@ -84,7 +86,8 @@ func invalidGender() *apiError {
 }
 
 func invalidBiography() *apiError {
-	return &apiError{code: "invalid_bio", field: "bio", message: "Invalid biography"}
+	message := fmt.Sprintf("Biography must be valid and no longer than %d characters", maxBioCharacters)
+	return &apiError{code: "invalid_bio", field: "bio", message: message}
 }
 
 func profileAlreadyExists() *apiError {

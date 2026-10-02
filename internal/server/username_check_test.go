@@ -9,7 +9,7 @@ import (
 )
 
 func TestUsernameCheckAcceptsValidNamesAtBoundaries(t *testing.T) {
-	names := []string{"abc", "a_2", strings.Repeat("a", 30)}
+	names := []string{"abc", "a_2", strings.Repeat("a", 15)}
 	for _, username := range names {
 		t.Run(username, func(t *testing.T) {
 			// Arrange: the candidate username is not in use.
@@ -40,7 +40,7 @@ func TestUsernameCheckRejectsInvalidFormatsBeforeLookup(t *testing.T) {
 	}{
 		{name: "empty", username: ""},
 		{name: "two characters", username: "ab"},
-		{name: "thirty-one characters", username: strings.Repeat("a", 31)},
+		{name: "sixteen characters", username: strings.Repeat("a", 16)},
 		{name: "starts with digit", username: "1alice"},
 		{name: "starts with underscore", username: "_alice"},
 		{name: "uppercase letter", username: "Alice"},
@@ -59,6 +59,12 @@ func TestUsernameCheckRejectsInvalidFormatsBeforeLookup(t *testing.T) {
 
 			// Assert: format validation stops before any database lookup or write.
 			assertAPIError(t, response, http.StatusUnprocessableEntity, "invalid_username", "username")
+			if test.name == "sixteen characters" {
+				message := responseJSON(t, response)["error"].(map[string]any)["message"]
+				if message != "Username must be 3-15 characters, start with a lowercase letter, and use only lowercase letters, numbers, or underscores" {
+					t.Errorf("error message = %v, want the username format and length limits", message)
+				}
+			}
 			if len(users.lookedUpNames) != 0 || users.createCalls != 0 {
 				t.Errorf("invalid username reached repository: lookups=%#v, creates=%d", users.lookedUpNames, users.createCalls)
 			}

@@ -102,7 +102,7 @@ Example:
 
 Username rules:
 
-- 3–30 characters.
+- 3–15 characters.
 - Must start with a lowercase ASCII letter (`a`–`z`).
 - Remaining characters may be lowercase ASCII letters, digits, or underscores.
 - Uppercase letters, spaces, hyphens, and non-ASCII letters are not accepted.
@@ -149,7 +149,7 @@ Example:
 
 Biography rules:
 
-- At most 750 Unicode code points.
+- At most 300 Unicode code points.
 - Newlines and tabs are allowed.
 - Other Unicode control characters are rejected.
 - Punctuation and ordinary whitespace are allowed.
@@ -302,7 +302,7 @@ All API errors use this envelope. `field` and `details` are included only when r
 {
   "error": {
     "code": "invalid_username",
-    "message": "Invalid username",
+    "message": "Username must be 3-15 characters, start with a lowercase letter, and use only lowercase letters, numbers, or underscores",
     "field": "username"
   }
 }

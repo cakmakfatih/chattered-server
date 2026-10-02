@@ -17,12 +17,14 @@ func TestOnboardingValidatorRegistersDomainRules(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "valid username", value: "alice_1", tag: "username", wantErr: false},
+		{name: "username at maximum length", value: strings.Repeat("a", 15), tag: "username", wantErr: false},
 		{name: "short username", value: "ab", tag: "username", wantErr: true},
+		{name: "username over maximum length", value: strings.Repeat("a", 16), tag: "username", wantErr: true},
 		{name: "uppercase username", value: "Alice", tag: "username", wantErr: true},
 		{name: "empty optional bio", value: "", tag: "bio", wantErr: false},
 		{name: "multiline bio", value: "Hello!\nMerhaba.", tag: "bio", wantErr: false},
-		{name: "Unicode bio at limit", value: strings.Repeat("ğ", 750), tag: "bio", wantErr: false},
-		{name: "Unicode bio over limit", value: strings.Repeat("ğ", 751), tag: "bio", wantErr: true},
+		{name: "Unicode bio at limit", value: strings.Repeat("ğ", 300), tag: "bio", wantErr: false},
+		{name: "Unicode bio over limit", value: strings.Repeat("ğ", 301), tag: "bio", wantErr: true},
 		{name: "control character in bio", value: "hello\x00world", tag: "bio", wantErr: true},
 		{name: "supported gender", value: "other", tag: "gender", wantErr: false},
 		{name: "unsupported gender", value: "unknown", tag: "gender", wantErr: true},

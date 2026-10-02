@@ -43,14 +43,14 @@ func TestBioValidationCountsUnicodeCharacters(t *testing.T) {
 		bio    string
 		status int
 	}{
-		{name: "exactly 750 ASCII characters", bio: strings.Repeat("a", 750), status: http.StatusOK},
-		{name: "exactly 750 Turkish characters", bio: strings.Repeat("ğ", 750), status: http.StatusOK},
-		{name: "751 ASCII characters", bio: strings.Repeat("a", 751), status: http.StatusUnprocessableEntity},
-		{name: "751 Turkish characters", bio: strings.Repeat("ğ", 751), status: http.StatusUnprocessableEntity},
+		{name: "exactly 300 ASCII characters", bio: strings.Repeat("a", 300), status: http.StatusOK},
+		{name: "exactly 300 Turkish characters", bio: strings.Repeat("ğ", 300), status: http.StatusOK},
+		{name: "301 ASCII characters", bio: strings.Repeat("a", 301), status: http.StatusUnprocessableEntity},
+		{name: "301 Turkish characters", bio: strings.Repeat("ğ", 301), status: http.StatusUnprocessableEntity},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// Arrange: prepare a biography at or beyond the 750-character limit.
+			// Arrange: prepare a biography at or beyond the 300-character limit.
 			users := &fakeUserRepository{}
 			router := testRouter(validSessionVerifier(), users)
 
@@ -67,6 +67,9 @@ func TestBioValidationCountsUnicodeCharacters(t *testing.T) {
 				}
 			} else {
 				assertAPIError(t, response, http.StatusUnprocessableEntity, "invalid_bio", "bio")
+				if got := responseJSON(t, response)["error"].(map[string]any)["message"]; got != "Biography must be valid and no longer than 300 characters" {
+					t.Errorf("error message = %v, want the 300-character limit", got)
+				}
 			}
 			if users.createCalls != 0 {
 				t.Errorf("create calls = %d, want zero", users.createCalls)

@@ -10,9 +10,10 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-const maxBioCharacters = 750
+const maxBioCharacters = 300
+const maxUsernameCharacters = 15
 
-var usernamePattern = regexp.MustCompile(`^[a-z][a-z0-9_]{2,29}$`)
+var usernamePattern = regexp.MustCompile(`^[a-z][a-z0-9_]{2,14}$`)
 
 // NewOnboardingValidator registers the rules shared by onboarding endpoints.
 func NewOnboardingValidator() *validator.Validate {
