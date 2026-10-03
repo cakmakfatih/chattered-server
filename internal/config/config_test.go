@@ -24,6 +24,7 @@ func TestLoadTrimsClerkSecretKey(t *testing.T) {
 	// Arrange: provide a secret with accidental surrounding whitespace.
 	t.Setenv("CLERK_SECRET_KEY", "  sk_test_example  ")
 	t.Setenv("DATABASE_URL", "  postgres://user:pass@localhost:5432/chattered?sslmode=disable  ")
+	t.Setenv("HOST", "")
 	t.Setenv("PORT", "")
 
 	// Act: load the server configuration.
@@ -33,8 +34,27 @@ func TestLoadTrimsClerkSecretKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() error = %v, want nil", err)
 	}
-	if config.ClerkSecretKey != "sk_test_example" || config.DatabaseURL != "postgres://user:pass@localhost:5432/chattered?sslmode=disable" || config.Port != "8080" {
-		t.Errorf("config = %#v, want trimmed secrets and default port", config)
+	if config.ClerkSecretKey != "sk_test_example" || config.DatabaseURL != "postgres://user:pass@localhost:5432/chattered?sslmode=disable" || config.Host != "0.0.0.0" || config.Port != "8080" {
+		t.Errorf("config = %#v, want trimmed secrets and default listen address", config)
+	}
+}
+
+func TestLoadTrimsConfiguredListenAddress(t *testing.T) {
+	// Arrange: configure an explicit host and port with surrounding whitespace.
+	t.Setenv("CLERK_SECRET_KEY", "sk_test_example")
+	t.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/chattered?sslmode=disable")
+	t.Setenv("HOST", "  127.0.0.1  ")
+	t.Setenv("PORT", "  9090  ")
+
+	// Act: load the server configuration.
+	config, err := Load()
+
+	// Assert: the explicit listen address is normalized.
+	if err != nil {
+		t.Fatalf("Load() error = %v, want nil", err)
+	}
+	if config.Host != "127.0.0.1" || config.Port != "9090" {
+		t.Errorf("listen address = %s:%s, want 127.0.0.1:9090", config.Host, config.Port)
 	}
 }
 

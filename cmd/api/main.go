@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net"
 
 	"github.com/clerk/clerk-sdk-go/v2"
 	clerkjwt "github.com/clerk/clerk-sdk-go/v2/jwt"
@@ -36,8 +37,9 @@ func main() {
 		Users:     database.NewUserRepository(db),
 		Validator: server.NewOnboardingValidator(),
 	})
-	log.Printf("API server listening on :%s", cfg.Port)
-	if err := router.Run(":" + cfg.Port); err != nil {
+	listenAddress := net.JoinHostPort(cfg.Host, cfg.Port)
+	log.Printf("API server listening on http://%s", listenAddress)
+	if err := router.Run(listenAddress); err != nil {
 		log.Fatal(err)
 	}
 }
