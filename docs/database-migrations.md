@@ -40,12 +40,13 @@ atlas migrate apply --env local
 ```
 
 Atlas applies the versioned SQL files and records the applied version in the
-database. Run this deployment step against the target database before starting
-the server version that depends on the change. The API process does not run
-schema migrations automatically.
+database. The Docker image runs this command against `DATABASE_URL` before it
+starts the API. If Atlas cannot connect or a migration fails, the container
+exits without starting the API. The Compose environment must provide the
+database URL for its `postgres` service.
 
 ## Initial migration
 
 The initial schema is in
-`migrations/20261001120000_create_users_and_presence_sessions.sql`. It has been
-prepared as a migration file only; it has not been applied to a database.
+`migrations/20261001120000_create_users_and_presence_sessions.sql` and is
+applied as the first versioned migration to a new database.

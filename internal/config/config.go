@@ -16,8 +16,8 @@ type Config struct {
 }
 
 func Load() (Config, error) {
-	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return Config{}, fmt.Errorf("load .env: %w", err)
+	if err := godotenv.Load(".env.dev"); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return Config{}, fmt.Errorf("load .env.dev: %w", err)
 	}
 
 	secretKey := strings.TrimSpace(os.Getenv("CLERK_SECRET_KEY"))
