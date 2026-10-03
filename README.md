@@ -30,12 +30,9 @@ The image runs Atlas migrations before starting the API. If a migration fails,
 the entrypoint exits with an error and the API does not start. It runs with
 `GIN_MODE=release` and listens on port `8080` by default. Set `PORT` to change
 the listening port. Provide `CLERK_SECRET_KEY` and `DATABASE_URL` as container
-environment variables. For example, when the root development environment
-file is available to Docker:
-
-```sh
-docker run --rm -p 8080:8080 --env-file ../.env.dev chattered-server
-```
+environment variables. Compose should pass these values from the root
+development environment file and connect the API and `postgres` services to the
+same network.
 
 The image includes Atlas, `atlas.hcl`, and the versioned migrations. It does
 not contain environment files or credentials. Atlas and the application use
