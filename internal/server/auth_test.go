@@ -19,6 +19,7 @@ func TestAuthGuardRequiresSessionOnEveryNewEndpoint(t *testing.T) {
 		{name: "username check", method: http.MethodPost, path: "/api/v1/onboarding/username/check"},
 		{name: "bio validation", method: http.MethodPost, path: "/api/v1/onboarding/bio/validate"},
 		{name: "photo validation", method: http.MethodPost, path: "/api/v1/onboarding/photo/validate"},
+		{name: "photo upload authorization", method: http.MethodPost, path: "/api/v1/onboarding/photo/upload"},
 		{name: "registration completion", method: http.MethodPost, path: "/api/v1/onboarding/complete"},
 	}
 	for _, route := range routes {

@@ -262,7 +262,7 @@ func TestCompleteRegistrationRejectsExistingClerkUser(t *testing.T) {
 	}
 }
 
-func TestCompleteRegistrationRejectsSecondSubmission(t *testing.T) {
+func TestCompleteRegistrationReturnsCompletedProfileForRepeatedSubmission(t *testing.T) {
 	// Arrange: the fake repository exposes a successful first insert on later reads.
 	users := &fakeUserRepository{}
 	users.getUserFn = func(context.Context, string) (*models.User, error) {
@@ -277,11 +277,16 @@ func TestCompleteRegistrationRejectsSecondSubmission(t *testing.T) {
 	first := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/complete", testAuthorization, validCompletionPayload())
 	second := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/complete", testAuthorization, validCompletionPayload())
 
-	// Assert: one account is saved and the repeated request is a conflict.
+	// Assert: a lost success response can be retried without creating another account.
 	if first.Code != http.StatusCreated {
 		t.Fatalf("first status = %d, want %d; body = %s", first.Code, http.StatusCreated, first.Body.String())
 	}
-	assertAPIError(t, second, http.StatusConflict, "profile_already_complete", "")
+	if second.Code != http.StatusOK {
+		t.Fatalf("second status = %d, want %d; body = %s", second.Code, http.StatusOK, second.Body.String())
+	}
+	if got := responseJSON(t, second)["registration_complete"]; got != true {
+		t.Errorf("second registration_complete = %v, want true", got)
+	}
 	if users.createCalls != 1 || len(users.saved) != 1 {
 		t.Errorf("create calls/saved = %d/%d, want 1/1", users.createCalls, len(users.saved))
 	}
