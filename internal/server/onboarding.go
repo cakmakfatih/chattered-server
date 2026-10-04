@@ -1,10 +1,7 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -81,11 +78,8 @@ func (deps Dependencies) authorizeProfilePhotoUpload(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if isAbsentJSON(fields["photo"]) {
-		respondError(c, http.StatusUnprocessableEntity, *invalidPhoto("photo", "Photo metadata is required"))
-		return
-	}
-	if photoErr := deps.validatePhotoMetadata(fields["photo"]); photoErr != nil {
+	photo, photoErr := deps.parseRequiredPhotoMetadata(fields["photo"])
+	if photoErr != nil {
 		respondError(c, http.StatusUnprocessableEntity, *photoErr)
 		return
 	}
@@ -94,11 +88,6 @@ func (deps Dependencies) authorizeProfilePhotoUpload(c *gin.Context) {
 		return
 	}
 
-	var photo photoMetadata
-	if err := json.Unmarshal(fields["photo"], &photo); err != nil {
-		respondError(c, http.StatusUnprocessableEntity, *invalidPhoto("photo", "Invalid photo metadata"))
-		return
-	}
 	clerkID := c.GetString("clerk_user_id")
 	user, err := deps.Users.GetByClerkID(c.Request.Context(), clerkID)
 	if err != nil {
@@ -110,21 +99,12 @@ func (deps Dependencies) authorizeProfilePhotoUpload(c *gin.Context) {
 		return
 	}
 
-	objectKey := profilePhotoObjectKeyForUser(clerkID)
-	uploadURL, expiresAt, err := deps.ProfilePhotos.AuthorizeUpload(c.Request.Context(), objectKey, photo.MIMEType, photo.SizeBytes)
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, apiError{code: "internal_error", message: "Could not authorize the profile photo upload"})
+	response, authorizationErr := deps.createProfilePhotoUploadAuthorization(c.Request.Context(), clerkID, photo)
+	if authorizationErr != nil {
+		respondError(c, http.StatusInternalServerError, *authorizationErr)
 		return
 	}
-	c.JSON(http.StatusOK, profilePhotoUploadAuthorizationResponse{
-		UploadURL: uploadURL,
-		Method:    http.MethodPut,
-		ExpiresAt: expiresAt.UTC().Format(time.RFC3339),
-		Headers: map[string]string{
-			"Content-Type":   photo.MIMEType,
-			"Content-Length": strconv.FormatInt(photo.SizeBytes, 10),
-		},
-	})
+	c.JSON(http.StatusOK, response)
 }
 
 func (deps Dependencies) complete(c *gin.Context) {

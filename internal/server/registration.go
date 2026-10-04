@@ -41,15 +41,9 @@ func (deps Dependencies) parseCompletionInput(fields map[string]json.RawMessage)
 	if apiErr := deps.biographyValidationError(bio); apiErr != nil {
 		return completionInput{}, apiErr
 	}
-	if apiErr := deps.validatePhotoMetadata(fields["photo"]); apiErr != nil {
+	photo, apiErr := deps.parsePhotoMetadata(fields["photo"])
+	if apiErr != nil {
 		return completionInput{}, apiErr
-	}
-	var photo *photoMetadata
-	if !isAbsentJSON(fields["photo"]) {
-		photo = &photoMetadata{}
-		if err := json.Unmarshal(fields["photo"], photo); err != nil {
-			return completionInput{}, invalidPhoto("photo", "Invalid photo metadata")
-		}
 	}
 
 	return completionInput{username: username, gender: gender, bio: bio, photo: photo}, nil

@@ -16,7 +16,6 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -501,14 +500,11 @@ func TestCompleteRegistrationRejectsUnverifiedProfilePhoto(t *testing.T) {
 
 func testRouterWithProfilePhotos(t *testing.T, verifier *fakeSessionVerifier, users *fakeUserRepository, photos *fakeProfilePhotoStore) http.Handler {
 	t.Helper()
-	deps := Dependencies{Verifier: verifier, Users: users, Validator: NewOnboardingValidator()}
-	field := reflect.ValueOf(&deps).Elem().FieldByName("ProfilePhotos")
-	if field.IsValid() {
-		value := reflect.ValueOf(photos)
-		if !value.Type().AssignableTo(field.Type()) {
-			t.Fatalf("fake profile photo store %s is not assignable to dependency %s", value.Type(), field.Type())
-		}
-		field.Set(value)
+	deps := Dependencies{
+		Verifier:      verifier,
+		Users:         users,
+		ProfilePhotos: photos,
+		Validator:     NewOnboardingValidator(),
 	}
 	return NewWithDependencies(deps)
 }
