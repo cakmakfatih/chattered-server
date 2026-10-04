@@ -83,7 +83,28 @@ func (deps Dependencies) complete(c *gin.Context) {
 		respondError(c, http.StatusUnprocessableEntity, *validationErr)
 		return
 	}
-	user, status, createErr := deps.createProfile(c.Request.Context(), c.GetString("clerk_user_id"), input)
+	clerkID := c.GetString("clerk_user_id")
+	existing, lookupErr := deps.Users.GetByClerkID(c.Request.Context(), clerkID)
+	if lookupErr != nil {
+		respondError(c, http.StatusInternalServerError, apiError{code: "internal_error", message: "Could not check registration status"})
+		return
+	}
+	if existing != nil {
+		if completionMatchesProfile(existing, input) {
+			c.JSON(http.StatusOK, registrationStatusResponse{RegistrationComplete: true, User: profileResponse(existing)})
+			return
+		}
+		respondError(c, http.StatusConflict, *profileAlreadyExists())
+		return
+	}
+	if input.photo != nil {
+		photoErr, status := deps.verifyProfilePhoto(c.Request.Context(), clerkID, input.photo)
+		if photoErr != nil {
+			respondError(c, status, *photoErr)
+			return
+		}
+	}
+	user, status, createErr := deps.createProfile(c.Request.Context(), clerkID, input)
 	if createErr != nil {
 		respondError(c, status, *createErr)
 		return

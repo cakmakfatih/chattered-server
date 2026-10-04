@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/cakmakfatih/chattered-server/internal/database/models"
 )
@@ -13,6 +14,7 @@ type completionInput struct {
 	username string
 	gender   string
 	bio      *string
+	photo    *photoMetadata
 }
 
 func (deps Dependencies) parseCompletionInput(fields map[string]json.RawMessage) (completionInput, *apiError) {
@@ -39,22 +41,15 @@ func (deps Dependencies) parseCompletionInput(fields map[string]json.RawMessage)
 	if apiErr := deps.biographyValidationError(bio); apiErr != nil {
 		return completionInput{}, apiErr
 	}
-	if apiErr := deps.validatePhotoMetadata(fields["photo"]); apiErr != nil {
+	photo, apiErr := deps.parsePhotoMetadata(fields["photo"])
+	if apiErr != nil {
 		return completionInput{}, apiErr
 	}
 
-	return completionInput{username: username, gender: gender, bio: bio}, nil
+	return completionInput{username: username, gender: gender, bio: bio, photo: photo}, nil
 }
 
 func (deps Dependencies) createProfile(ctx context.Context, clerkID string, input completionInput) (*models.User, int, *apiError) {
-	existing, err := deps.Users.GetByClerkID(ctx, clerkID)
-	if err != nil {
-		return nil, http.StatusInternalServerError, &apiError{code: "internal_error", message: "Could not check registration status"}
-	}
-	if existing != nil {
-		return nil, http.StatusConflict, profileAlreadyExists()
-	}
-
 	available, apiErr := deps.usernameAvailability(ctx, input.username)
 	if apiErr != nil {
 		return nil, http.StatusInternalServerError, apiErr
@@ -69,11 +64,25 @@ func (deps Dependencies) createProfile(ctx context.Context, clerkID string, inpu
 		Gender:      input.gender,
 		Bio:         input.bio,
 	}
+	if input.photo != nil {
+		objectKey := profilePhotoObjectKeyForUser(clerkID)
+		user.ProfileImageKey = &objectKey
+	}
 	if err := deps.Users.Create(ctx, user); err != nil {
 		status, apiErr := userCreationError(err)
 		return nil, status, &apiErr
 	}
 	return user, http.StatusCreated, nil
+}
+
+func completionMatchesProfile(user *models.User, input completionInput) bool {
+	if user.Username != input.username || user.Gender != input.gender || !reflect.DeepEqual(user.Bio, input.bio) {
+		return false
+	}
+	if input.photo == nil {
+		return user.ProfileImageKey == nil
+	}
+	return user.ProfileImageKey != nil && *user.ProfileImageKey == profilePhotoObjectKeyForUser(user.ClerkUserID)
 }
 
 func invalidUsername() *apiError {

@@ -27,26 +27,42 @@ type photoMetadata struct {
 }
 
 func (deps Dependencies) validatePhotoMetadata(raw json.RawMessage) *apiError {
+	_, apiErr := deps.parsePhotoMetadata(raw)
+	return apiErr
+}
+
+func (deps Dependencies) parseRequiredPhotoMetadata(raw json.RawMessage) (*photoMetadata, *apiError) {
+	photo, apiErr := deps.parsePhotoMetadata(raw)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	if photo == nil {
+		return nil, invalidPhoto("photo", "Photo metadata is required")
+	}
+	return photo, nil
+}
+
+func (deps Dependencies) parsePhotoMetadata(raw json.RawMessage) (*photoMetadata, *apiError) {
 	if isAbsentJSON(raw) {
-		return nil
+		return nil, nil
 	}
 
-	var photo photoMetadata
-	if err := json.Unmarshal(raw, &photo); err != nil {
-		return invalidPhoto("photo", "Invalid photo metadata")
+	photo := &photoMetadata{}
+	if err := json.Unmarshal(raw, photo); err != nil {
+		return nil, invalidPhoto("photo", "Invalid photo metadata")
 	}
 
-	expectedMIME, err := expectedPhotoMIME(photo.FileName)
-	if err != nil {
-		return err
+	expectedMIME, apiErr := expectedPhotoMIME(photo.FileName)
+	if apiErr != nil {
+		return nil, apiErr
 	}
 	if deps.Validator.Var(photo.MIMEType, "required,oneof=image/jpeg image/png image/heic") != nil || expectedMIME != photo.MIMEType {
-		return invalidPhoto("photo.mime_type", "Photo MIME type must match its extension")
+		return nil, invalidPhoto("photo.mime_type", "Photo MIME type must match its extension")
 	}
 	if deps.Validator.Var(photo.SizeBytes, photoSizeValidationTag) != nil {
-		return invalidPhotoSize()
+		return nil, invalidPhotoSize()
 	}
-	return nil
+	return photo, nil
 }
 
 func expectedPhotoMIME(fileName string) (string, *apiError) {
