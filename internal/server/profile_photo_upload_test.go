@@ -499,24 +499,6 @@ func TestCompleteRegistrationRejectsUnverifiedProfilePhoto(t *testing.T) {
 	}
 }
 
-func TestCompleteRegistrationRequiresDirectUploadForPhotoMetadata(t *testing.T) {
-	// Arrange: the request includes photo metadata but no object was uploaded.
-	photos := &fakeProfilePhotoStore{}
-	users := &fakeUserRepository{}
-	router := testRouterWithProfilePhotos(t, validSessionVerifier(), users, photos)
-	payload := validCompletionPayload()
-	payload["photo"] = validPhotoMetadata()
-
-	// Act: attempt to complete registration before the direct upload.
-	response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/complete", testAuthorization, payload)
-
-	// Assert: metadata alone can no longer create a completed profile.
-	assertAPIError(t, response, http.StatusConflict, "photo_upload_incomplete", "photo")
-	if users.createCalls != 0 || len(users.saved) != 0 {
-		t.Errorf("create calls/saved = %d/%d, want 0/0", users.createCalls, len(users.saved))
-	}
-}
-
 func testRouterWithProfilePhotos(t *testing.T, verifier *fakeSessionVerifier, users *fakeUserRepository, photos *fakeProfilePhotoStore) http.Handler {
 	t.Helper()
 	deps := Dependencies{Verifier: verifier, Users: users, Validator: NewOnboardingValidator()}

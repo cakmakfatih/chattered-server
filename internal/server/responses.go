@@ -13,6 +13,13 @@ type userProfileResponse struct {
 	Gender   string  `json:"gender"`
 }
 
+type profilePhotoUploadAuthorizationResponse struct {
+	UploadURL string            `json:"upload_url"`
+	Method    string            `json:"method"`
+	ExpiresAt string            `json:"expires_at"`
+	Headers   map[string]string `json:"headers"`
+}
+
 func profileResponse(user *models.User) *userProfileResponse {
 	return &userProfileResponse{
 		Username: user.Username,

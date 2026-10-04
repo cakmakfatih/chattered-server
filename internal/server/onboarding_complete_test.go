@@ -117,22 +117,21 @@ func TestCompleteRegistrationAcceptsBioAtUnicodeLimit(t *testing.T) {
 	}
 }
 
-func TestCompleteRegistrationValidatesPhotoMetadataWithoutSavingImage(t *testing.T) {
-	// Arrange: include valid photo metadata without photo bytes or Tigris storage.
+func TestCompleteRegistrationRejectsPhotoMetadataWithoutDirectUpload(t *testing.T) {
+	// Arrange: include valid photo metadata without an uploaded Tigris object.
 	users := &fakeUserRepository{}
-	router := testRouter(validSessionVerifier(), users)
+	photos := &fakeProfilePhotoStore{}
+	router := testRouterWithProfilePhotos(t, validSessionVerifier(), users, photos)
 	payload := validCompletionPayload()
 	payload["photo"] = validPhotoMetadata()
 
-	// Act: complete onboarding.
+	// Act: attempt to complete onboarding before the direct upload.
 	response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/complete", testAuthorization, payload)
 
-	// Assert: metadata is accepted but cannot create a stored image key.
-	if response.Code != http.StatusCreated {
-		t.Fatalf("status = %d, want %d; body = %s", response.Code, http.StatusCreated, response.Body.String())
-	}
-	if len(users.saved) != 1 || users.saved[0].ProfileImageKey != nil {
-		t.Fatalf("saved profile image key = %#v, want nil", users.saved)
+	// Assert: metadata alone cannot complete registration or create a profile.
+	assertAPIError(t, response, http.StatusConflict, "photo_upload_incomplete", "photo")
+	if users.createCalls != 0 || len(users.saved) != 0 {
+		t.Errorf("create calls/saved = %d/%d, want 0/0", users.createCalls, len(users.saved))
 	}
 }
 

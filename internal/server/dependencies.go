@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"io"
+	"time"
 
 	"github.com/cakmakfatih/chattered-server/internal/database/models"
 	"github.com/gin-gonic/gin"
@@ -10,9 +12,15 @@ import (
 
 // Dependencies lists the services the onboarding router will use.
 type Dependencies struct {
-	Verifier  sessionVerifier
-	Users     userRepository
-	Validator *validator.Validate
+	Verifier      sessionVerifier
+	Users         userRepository
+	ProfilePhotos profilePhotoStore
+	Validator     *validator.Validate
+}
+
+type profilePhotoStore interface {
+	AuthorizeUpload(context.Context, string, string, int64) (string, time.Time, error)
+	OpenObject(context.Context, string) (io.ReadCloser, string, int64, error)
 }
 
 type userRepository interface {
@@ -30,6 +38,7 @@ func NewWithDependencies(deps Dependencies) *gin.Engine {
 	api.POST("/onboarding/username/check", deps.checkUsername)
 	api.POST("/onboarding/bio/validate", deps.validateBio)
 	api.POST("/onboarding/photo/validate", deps.validatePhoto)
+	api.POST("/onboarding/photo/upload", deps.authorizeProfilePhotoUpload)
 	api.POST("/onboarding/complete", deps.complete)
 	return router
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/cakmakfatih/chattered-server/internal/config"
 	"github.com/cakmakfatih/chattered-server/internal/database"
 	"github.com/cakmakfatih/chattered-server/internal/server"
+	"github.com/cakmakfatih/chattered-server/internal/storage"
 )
 
 type clerkSessionVerifier struct{}
@@ -31,11 +32,23 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	profilePhotos, err := storage.NewTigrisProfilePhotoStore(
+		context.Background(),
+		cfg.TigrisEndpoint,
+		cfg.TigrisBucket,
+		cfg.TigrisRegion,
+		cfg.TigrisAccessKeyID,
+		cfg.TigrisSecretAccessKey,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	router := server.NewWithDependencies(server.Dependencies{
-		Verifier:  clerkSessionVerifier{},
-		Users:     database.NewUserRepository(db),
-		Validator: server.NewOnboardingValidator(),
+		Verifier:      clerkSessionVerifier{},
+		Users:         database.NewUserRepository(db),
+		ProfilePhotos: profilePhotos,
+		Validator:     server.NewOnboardingValidator(),
 	})
 	listenAddress := net.JoinHostPort(cfg.Host, cfg.Port)
 	log.Printf("API server listening on http://%s", listenAddress)
