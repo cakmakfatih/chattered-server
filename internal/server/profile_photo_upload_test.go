@@ -25,6 +25,7 @@ import (
 )
 
 const profilePhotoObjectKey = "users/clerk-user-1/profile/avatar"
+const profilePhotoAuthorizationPath = "/api/v1/me/profile-photo"
 
 type profilePhotoAuthorizationCall struct {
 	objectKey string
@@ -74,7 +75,7 @@ func TestAuthorizeProfilePhotoUploadReturnsConstrainedDirectUpload(t *testing.T)
 	router := testRouterWithProfilePhotos(t, validSessionVerifier(), users, photos)
 
 	// Act: request permission to upload directly to Tigris.
-	response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{
+	response := requestJSON(t, router, http.MethodPut, profilePhotoAuthorizationPath, testAuthorization, map[string]any{
 		"photo": validPhotoMetadata(),
 	})
 
@@ -116,6 +117,25 @@ func TestAuthorizeProfilePhotoUploadReturnsConstrainedDirectUpload(t *testing.T)
 	}
 }
 
+func TestProfilePhotoAuthorizationIsNotAnOnboardingRoute(t *testing.T) {
+	// Arrange: configure the API with a usable upload store.
+	photos := &fakeProfilePhotoStore{}
+	router := testRouterWithProfilePhotos(t, validSessionVerifier(), &fakeUserRepository{}, photos)
+
+	// Act: call the former onboarding upload route.
+	response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{
+		"photo": validPhotoMetadata(),
+	})
+
+	// Assert: upload authorization is only available on the authenticated user resource.
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d; body = %s", response.Code, http.StatusNotFound, response.Body.String())
+	}
+	if len(photos.authorizeCalls) != 0 {
+		t.Errorf("authorization calls = %d, want zero", len(photos.authorizeCalls))
+	}
+}
+
 func TestAuthorizeProfilePhotoUploadAcceptsSupportedFormats(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -134,7 +154,7 @@ func TestAuthorizeProfilePhotoUploadAcceptsSupportedFormats(t *testing.T) {
 			photo := map[string]any{"file_name": test.fileName, "mime_type": test.mimeType, "size_bytes": 2048}
 
 			// Act: request a direct-upload authorization.
-			response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": photo})
+			response := requestJSON(t, router, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": photo})
 
 			// Assert: the signed upload is constrained to the submitted format and length.
 			if response.Code != http.StatusOK {
@@ -172,7 +192,7 @@ func TestAuthorizeProfilePhotoUploadRevalidatesMetadata(t *testing.T) {
 			router := testRouterWithProfilePhotos(t, validSessionVerifier(), &fakeUserRepository{}, photos)
 
 			// Act: bypass preliminary validation and request an upload directly.
-			response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": test.photo})
+			response := requestJSON(t, router, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": test.photo})
 
 			// Assert: the upload endpoint independently rejects the metadata.
 			assertAPIError(t, response, http.StatusUnprocessableEntity, "invalid_photo", test.field)
@@ -192,7 +212,7 @@ func TestAuthorizeProfilePhotoUploadRejectsStorageControls(t *testing.T) {
 			payload := map[string]any{"photo": validPhotoMetadata(), field: "client-controlled"}
 
 			// Act: request an upload with the untrusted setting.
-			response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, payload)
+			response := requestJSON(t, router, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, payload)
 
 			// Assert: storage location and access policy cannot be selected by the client.
 			assertAPIError(t, response, http.StatusUnprocessableEntity, "unexpected_field", field)
@@ -213,10 +233,10 @@ func TestAuthorizeProfilePhotoUploadReusesOneServerOwnedObjectKey(t *testing.T) 
 	bobRouter := testRouterWithProfilePhotos(t, bobVerifier, users, photos)
 
 	// Act: authorize a retry for Alice and an independent upload for Bob.
-	first := requestJSON(t, aliceRouter, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
+	first := requestJSON(t, aliceRouter, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
 	retryPhoto := map[string]any{"file_name": "replacement.png", "mime_type": "image/png", "size_bytes": 2048}
-	retry := requestJSON(t, aliceRouter, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": retryPhoto})
-	otherUser := requestJSON(t, bobRouter, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
+	retry := requestJSON(t, aliceRouter, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": retryPhoto})
+	otherUser := requestJSON(t, bobRouter, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
 
 	// Assert: retries overwrite one stable location while different users remain isolated.
 	responses := []struct {
@@ -276,7 +296,7 @@ func TestConcurrentProfilePhotoUploadAuthorizationsUseOneObjectKey(t *testing.T)
 	for index := 0; index < requestCount; index++ {
 		go func(index int) {
 			defer requests.Done()
-			request := httptest.NewRequest(http.MethodPost, "/api/v1/onboarding/photo/upload", bytes.NewReader(bodies[index]))
+			request := httptest.NewRequest(http.MethodPut, "/api/v1/me/profile-photo", bytes.NewReader(bodies[index]))
 			request.Header.Set("Authorization", testAuthorization)
 			request.Header.Set("Content-Type", "application/json")
 			response := httptest.NewRecorder()
@@ -314,7 +334,7 @@ func TestAuthorizeProfilePhotoUploadRejectsCompletedProfile(t *testing.T) {
 	router := testRouterWithProfilePhotos(t, validSessionVerifier(), users, photos)
 
 	// Act: attempt to create another onboarding upload authorization.
-	response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
+	response := requestJSON(t, router, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
 
 	// Assert: completed users cannot use onboarding to overwrite their photo.
 	assertAPIError(t, response, http.StatusConflict, "profile_already_complete", "")
@@ -332,7 +352,7 @@ func TestAuthorizeProfilePhotoUploadDoesNotLeakStorageFailure(t *testing.T) {
 	router := testRouterWithProfilePhotos(t, validSessionVerifier(), &fakeUserRepository{}, photos)
 
 	// Act: request a direct upload authorization.
-	response := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
+	response := requestJSON(t, router, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
 
 	// Assert: the API fails closed without returning storage credentials or provider diagnostics.
 	assertAPIError(t, response, http.StatusInternalServerError, "internal_error", "")
@@ -348,7 +368,7 @@ func TestPhotoUploadAuthorizationDoesNotCompleteRegistration(t *testing.T) {
 	router := testRouterWithProfilePhotos(t, validSessionVerifier(), users, photos)
 
 	// Act: authorize an upload, then reopen registration status without completing it.
-	authorization := requestJSON(t, router, http.MethodPost, "/api/v1/onboarding/photo/upload", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
+	authorization := requestJSON(t, router, http.MethodPut, "/api/v1/me/profile-photo", testAuthorization, map[string]any{"photo": validPhotoMetadata()})
 	status := requestJSON(t, router, http.MethodGet, "/api/v1/me", testAuthorization, nil)
 
 	// Assert: an abandoned direct upload never traps or falsely completes registration.

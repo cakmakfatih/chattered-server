@@ -38,7 +38,7 @@ func NewWithDependencies(deps Dependencies) *gin.Engine {
 	api.POST("/onboarding/username/check", deps.checkUsername)
 	api.POST("/onboarding/bio/validate", deps.validateBio)
 	api.POST("/onboarding/photo/validate", deps.validatePhoto)
-	api.POST("/onboarding/photo/upload", deps.authorizeProfilePhotoUpload)
+	api.PUT("/me/profile-photo", deps.authorizeProfilePhotoUpload)
 	api.POST("/onboarding/complete", deps.complete)
 	return router
 }

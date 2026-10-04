@@ -19,7 +19,7 @@ func TestAuthGuardRequiresSessionOnEveryNewEndpoint(t *testing.T) {
 		{name: "username check", method: http.MethodPost, path: "/api/v1/onboarding/username/check"},
 		{name: "bio validation", method: http.MethodPost, path: "/api/v1/onboarding/bio/validate"},
 		{name: "photo validation", method: http.MethodPost, path: "/api/v1/onboarding/photo/validate"},
-		{name: "photo upload authorization", method: http.MethodPost, path: "/api/v1/onboarding/photo/upload"},
+		{name: "photo upload authorization", method: http.MethodPut, path: "/api/v1/me/profile-photo"},
 		{name: "registration completion", method: http.MethodPost, path: "/api/v1/onboarding/complete"},
 	}
 	for _, route := range routes {
@@ -185,8 +185,11 @@ func TestCORSPreflightDoesNotRequireSession(t *testing.T) {
 	if response.Code != http.StatusNoContent {
 		t.Fatalf("preflight status = %d, want %d", response.Code, http.StatusNoContent)
 	}
-	if !strings.Contains(response.Header().Get("Access-Control-Allow-Methods"), "POST") {
-		t.Errorf("allowed methods = %q, want POST", response.Header().Get("Access-Control-Allow-Methods"))
+	allowedMethods := response.Header().Get("Access-Control-Allow-Methods")
+	for _, method := range []string{"POST", "PUT"} {
+		if !strings.Contains(allowedMethods, method) {
+			t.Errorf("allowed methods = %q, want %s", allowedMethods, method)
+		}
 	}
 	if verifier.calls != 0 || users.createCalls != 0 {
 		t.Fatalf("preflight reached protected dependencies: verifier=%d, creates=%d", verifier.calls, users.createCalls)

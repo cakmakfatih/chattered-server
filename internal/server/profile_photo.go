@@ -15,9 +15,45 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 const maxPhotoPixels = 40_000_000
+
+func (deps Dependencies) authorizeProfilePhotoUpload(c *gin.Context) {
+	fields, ok := readRequestObject(c, "photo")
+	if !ok {
+		return
+	}
+	photo, photoErr := deps.parseRequiredPhotoMetadata(fields["photo"])
+	if photoErr != nil {
+		respondError(c, http.StatusUnprocessableEntity, *photoErr)
+		return
+	}
+	if deps.ProfilePhotos == nil {
+		respondError(c, http.StatusInternalServerError, apiError{code: "internal_error", message: "Could not authorize the profile photo upload"})
+		return
+	}
+
+	clerkID := c.GetString("clerk_user_id")
+	user, err := deps.Users.GetByClerkID(c.Request.Context(), clerkID)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, apiError{code: "internal_error", message: "Could not check registration status"})
+		return
+	}
+	if user != nil {
+		respondError(c, http.StatusConflict, *profileAlreadyExists())
+		return
+	}
+
+	response, authorizationErr := deps.createProfilePhotoUploadAuthorization(c.Request.Context(), clerkID, photo)
+	if authorizationErr != nil {
+		respondError(c, http.StatusInternalServerError, *authorizationErr)
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
 
 func profilePhotoObjectKeyForUser(clerkID string) string {
 	return "users/" + url.PathEscape(clerkID) + "/profile/avatar"

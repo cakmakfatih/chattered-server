@@ -22,7 +22,7 @@ This document defines the HTTP API contract between the Chattered mobile app and
 
 ### CORS
 
-The API allows any origin (`*`), allows the `Authorization` and `Content-Type` headers, and lists `GET`, `POST`, and `OPTIONS` as allowed methods. CORS preflight `OPTIONS` requests return `204 No Content` before authentication runs.
+The API allows any origin (`*`), allows the `Authorization` and `Content-Type` headers, and lists `GET`, `POST`, `PUT`, and `OPTIONS` as allowed methods. CORS preflight `OPTIONS` requests return `204 No Content` before authentication runs.
 
 ## Authentication
 
@@ -44,7 +44,7 @@ Missing, malformed, or invalid credentials return `401 Unauthorized`. The respon
 | `POST` | `/api/v1/onboarding/username/check` | Validate username format and check current availability. |
 | `POST` | `/api/v1/onboarding/bio/validate` | Validate and normalize optional biography text. |
 | `POST` | `/api/v1/onboarding/photo/validate` | Validate optional profile photo metadata before upload. |
-| `POST` | `/api/v1/onboarding/photo/upload` | Get a short-lived direct-to-Tigris upload authorization. |
+| `PUT` | `/api/v1/me/profile-photo` | Get a short-lived direct-to-Tigris upload authorization for the authenticated user's profile photo. |
 | `POST` | `/api/v1/onboarding/complete` | Verify submitted profile data and finish registration. |
 
 Every route in this table requires a verified Clerk session. The only exception is a CORS `OPTIONS` preflight, which is handled before authentication. JSON endpoints accept one JSON object and reject unknown top-level fields. The direct file transfer uses the Tigris signed URL and does not pass image bytes through the Chattered API.
@@ -260,10 +260,12 @@ Valid metadata or no photo:
 ### Authorize a direct profile photo upload
 
 ```http
-POST /api/v1/onboarding/photo/upload
+PUT /api/v1/me/profile-photo
 ```
 
-Validates the selected photo metadata and returns a short-lived, server-signed URL for uploading directly to the configured private Tigris bucket. The client sends the file bytes with an HTTP `PUT` to `upload_url` and includes the returned `Content-Type` and `Content-Length` headers exactly. The signature binds the request to the server-selected bucket, object key, content type, and declared length. The object key is derived from the verified Clerk identity and has the form `users/{clerk_user_id}/profile/avatar`; filenames from the client are never part of the key. Requests and retries for the same authenticated user reuse that object location. The authorization expires after 10 minutes.
+Validates the selected photo metadata and returns a short-lived, server-signed URL for replacing the authenticated user's profile photo in the configured private Tigris bucket. This route is attached to the current-user profile resource rather than onboarding because the photo belongs to the user and the same resource can support profile-photo changes later. At present, users who already have a local profile receive `409 profile_already_complete`; updating an existing profile photo is not yet supported.
+
+The client sends the file bytes with an HTTP `PUT` to `upload_url` and includes the returned `Content-Type` and `Content-Length` headers exactly. The signature binds the request to the server-selected bucket, object key, content type, and declared length. The object key is derived from the verified Clerk identity and has the form `users/{clerk_user_id}/profile/avatar`; filenames from the client are never part of the key. Requests and retries for the same authenticated user reuse that object location. The authorization expires after 10 minutes.
 
 **Request body:**
 
@@ -407,7 +409,7 @@ Unexpected fields are checked at the top level. Error messages are in English; c
 2. Call `GET /api/v1/me` to check whether the authenticated Clerk user already has a Chattered profile.
 3. For an incomplete profile, call `POST /api/v1/onboarding/username/check` as the user enters a username. A positive availability result does not reserve the name.
 4. Call `POST /api/v1/onboarding/bio/validate` and `POST /api/v1/onboarding/photo/validate` to give early feedback. These endpoints do not persist data.
-5. If a photo was selected, request `POST /api/v1/onboarding/photo/upload` with the metadata. Keep the returned signed URL private.
+5. If a photo was selected, request `PUT /api/v1/me/profile-photo` with the metadata. Keep the returned signed URL private.
 6. PUT the photo bytes directly to the returned URL with the returned `Content-Type` and `Content-Length` headers. Do not send the Clerk token to Tigris. Wait for the PUT to succeed or show an upload error and allow retry.
 7. Submit all profile fields, including the same photo metadata, to `POST /api/v1/onboarding/complete`. The server repeats every validation, verifies the stored object, uses the verified Clerk user ID, checks current username availability, and creates the profile.
 
